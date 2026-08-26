@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eLink — Hosted</title>
+<style>
+  :root{
+    --bg:#0d1b2a;
+    --panel:#132a3e;
+    --panel-2:#173653;
+    --border:#264a63;
+    --text:#e8f1f8;
+    --text-muted:#8fa9bd;
+    --accent:#e8935a;
+    --accent-text:#2a1206;
+    --good:#4fb286;
+    --warn:#e8935a;
+    --bad:#e0645f;
+    --mono:'IBM Plex Mono', 'Courier New', monospace;
+    --sans:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); font-size:14.5px; line-height:1.5;
+  }
+  a{color:inherit;}
+  .hidden{display:none !important;}
+
+  /* ---------- Auth screen ---------- */
+  #authScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(232,147,90,0.10), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(79,178,134,0.08), transparent 45%),
+      var(--bg);
+  }
+  .auth-card{
+    width:380px; background:var(--panel); border:1px solid var(--border);
+    border-radius:14px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,0.4);
+  }
+  .brand{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .brand-mark{
+    width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(135deg, var(--accent), #c96a35);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; color:var(--accent-text); font-family:var(--mono);
+  }
+  .brand-name{font-weight:700; font-size:19px; letter-spacing:-0.02em;}
+  .brand-sub{color:var(--text-muted); font-size:12.5px; margin:0 0 22px 34px;}
+  .auth-tabs{display:flex; gap:4px; background:var(--bg); border-radius:10px; padding:4px; margin-bottom:20px;}
+  .auth-tab{
+    flex:1; text-align:center; padding:8px 0; border-radius:8px; cursor:pointer;
+    color:var(--text-muted); font-size:13px; font-weight:600;
+  }
+  .auth-tab.active{background:var(--panel-2); color:var(--text);}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; color:var(--text-muted); margin-bottom:5px;}
+  .field input{
+    width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-size:14px; font-family:var(--sans);
+  }
+  .field input:focus{outline:none; border-color:var(--accent);}
+  .btn{
+    width:100%; padding:11px; border-radius:8px; border:none; cursor:pointer;
+    font-weight:600; font-size:14px; font-family:var(--sans);
+  }
+  .btn-primary{background:var(--accent); color:var(--accent-text);}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .auth-error{color:var(--bad); font-size:12.5px; margin-top:10px; min-height:16px;}
+
+  /* ---------- App shell ---------- */
+  #appScreen{display:none; min-height:100vh;}
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px; border-bottom:1px solid var(--border); background:var(--panel);
+  }
+  .topbar .brand-name{font-size:16px;}
+  .topbar .biz{color:var(--text-muted); font-size:13px;}
+  .logout-btn{
+    background:transparent; border:1px solid var(--border); color:var(--text-muted);
+    padding:7px 14px; border-radius:7px; cursor:pointer; font-size:12.5px;
+  }
+  .tabs{
+    display:flex; gap:2px; padding:0 20px; border-bottom:1px solid var(--border);
+    background:var(--panel); overflow-x:auto;
+  }
+  .tab-btn{
+    padding:12px 16px; background:none; border:none; color:var(--text-muted);
+    cursor:pointer; font-size:13.5px; font-weight:600; border-bottom:2px solid transparent;
+    white-space:nowrap;
+  }
+  .tab-btn.active{color:var(--accent); border-bottom-color:var(--accent);}
+  main{padding:24px; max-width:1100px; margin:0 auto;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:20px; margin-bottom:16px;
+  }
+  .card-title{font-weight:700; font-size:15px; margin-bottom:14px;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px;}
+  .stat-card{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:16px;
+  }
+  .stat-label{font-size:11.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);}
+  .stat-value{font-family:var(--mono); font-weight:700; font-size:24px; margin-top:6px;}
+  .stat-value.good{color:var(--good);}
+  .stat-value.warn{color:var(--warn);}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{
+    text-align:left; padding:8px 10px; color:var(--text-muted); font-weight:600;
+    font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;
+    border-bottom:1px solid var(--border);
+  }
+  td{padding:9px 10px; border-bottom:1px solid rgba(255,255,255,0.04);}
+  .num{font-family:var(--mono); text-align:right;}
+  .pill{
+    display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600;
+  }
+  .pill-open{background:rgba(232,147,90,0.18); color:var(--warn);}
+  .pill-settled{background:rgba(79,178,134,0.18); color:var(--good);}
+  .pill-voided{background:rgba(224,100,95,0.18); color:var(--bad);}
+
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .form-grid .field{margin-bottom:0;}
+  .btn-row{margin-top:14px; display:flex; gap:10px;}
+  .btn-sm{width:auto; padding:7px 14px; font-size:12.5px;}
+  .empty-state{color:var(--text-muted); text-align:center; padding:30px 0; font-size:13px;}
+  select{
+    width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-size:14px; font-family:var(--sans);
+  }
+  .checkbox-row{display:flex; align-items:center; gap:8px; font-size:13.5px;}
+  .toast{
+    position:fixed; bottom:20px; right:20px; background:var(--panel-2); border:1px solid var(--border);
+    padding:12px 18px; border-radius:10px; font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,0.3);
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="brand">
+      <div class="brand-mark">eL</div>
+      <div class="brand-name">eLink</div>
+    </div>
+    <p class="brand-sub">Hosted — sign in from any device</p>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" data-authtab="login">Log in</div>
+      <div class="auth-tab" data-authtab="signup">Create business</div>
+    </div>
+
+    <div id="loginForm">
+      <div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="you@business.com"></div>
+      <div class="field"><label>Password</label><input id="loginPassword" type="password" placeholder="••••••••"></div>
+      <button class="btn btn-primary" id="loginBtn">Log in</button>
+    </div>
+
+    <div id="signupForm" class="hidden">
+      <div class="field"><label>Business name</label><input id="suBiz" type="text" placeholder="Kofi Hotspot Shop"></div>
+      <div class="field"><label>Your name</label><input id="suName" type="text" placeholder="Kofi Mensah"></div>
+      <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@business.com"></div>
+      <div class="field"><label>Password</label><input id="suPassword" type="password" placeholder="At least 8 characters"></div>
+      <button class="btn btn-primary" id="signupBtn">Create business &amp; start free trial</button>
+    </div>
+
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<!-- ============ APP SCREEN ============ -->
+<div id="appScreen">
+  <div class="topbar">
+    <div>
+      <div class="brand-name" id="bizName">—</div>
+      <div class="biz" id="userName">—</div>
+    </div>
+    <button class="logout-btn" id="logoutBtn">Log out</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="record">Record Sale</button>
+    <button class="tab-btn" data-tab="vouchers">Vouchers</button>
+    <button class="tab-btn" data-tab="log">Sales Log</button>
+    <button class="tab-btn" data-tab="debtors">Debtors</button>
+    <button class="tab-btn" data-tab="agents">Agent Commission</button>
+  </div>
+
+  <main id="mainContent"></main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://127.0.0.1:8000'
+  : ''; // set this to your deployed API URL in production
+
+let token = localStorage.getItem('elink_token') || null;
+let bizName = localStorage.getItem('elink_biz') || '';
+let userName = localStorage.getItem('elink_user') || '';
+
+// ---------- tiny fetch helper ----------
+async function api(path, opts = {}) {
+  const headers = opts.headers || {};
+  headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(API + path, { ...opts, headers });
+  if (res.status === 401) { doLogout(); throw new Error('Session expired'); }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Request failed');
+  }
+  return res.json();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2600);
+}
+
+function fmtMoney(n) {
+  return 'GHS ' + (Number(n) || 0).toFixed(2);
+}
+
+// ---------- Auth screen wiring ----------
+document.querySelectorAll('[data-authtab]').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('[data-authtab]').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    const which = el.dataset.authtab;
+    document.getElementById('loginForm').classList.toggle('hidden', which !== 'login');
+    document.getElementById('signupForm').classList.toggle('hidden', which !== 'signup');
+    document.getElementById('authError').textContent = '';
+  });
+});
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  try {
+    const res = await fetch(API + '/auth/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
+    const data = await res.json();
+    completeAuth(data);
+  } catch (e) {
+    document.getElementById('authError').textContent = e.message;
+  }
+});
+
+document.getElementById('signupBtn').addEventListener('click', async () => {
+  const business_name = document.getElementById('suBiz').value.trim();
+  const owner_name = document.getElementById('suName').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const password = document.getElementById('suPassword').value;
+  try {
+    const res = await fetch(API + '/auth/signup', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ business_name, owner_name, email, password })
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Signup failed');
+    const data = await res.json();
+    completeAuth(data);
+  } catch (e) {
+    document.getElementById('authError').textContent = e.message;
+  }
+});
+
+function completeAuth(data) {
+  token = data.access_token;
+  bizName = data.business_name;
+  userName = data.user_name;
+  localStorage.setItem('elink_token', token);
+  localStorage.setItem('elink_biz', bizName);
+  localStorage.setItem('elink_user', userName);
+  enterApp();
+}
+
+function doLogout() {
+  token = null;
+  localStorage.removeItem('elink_token');
+  localStorage.removeItem('elink_biz');
+  localStorage.removeItem('elink_user');
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+}
+document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+function enterApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('bizName').textContent = bizName;
+  document.getElementById('userName').textContent = userName;
+  renderTab('dashboard');
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTab(btn.dataset.tab);
+  });
+});
+
+async function renderTab(tab) {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<div class="empty-state">Loading…</div>';
+  try {
+    if (tab === 'dashboard') await renderDashboard(main);
+    else if (tab === 'record') await renderRecordSale(main);
+    else if (tab === 'vouchers') await renderVouchers(main);
+    else if (tab === 'log') await renderSalesLog(main);
+    else if (tab === 'debtors') await renderDebtors(main);
+    else if (tab === 'agents') await renderAgents(main);
+  } catch (e) {
+    main.innerHTML = `<div class="card"><div class="empty-state">${e.message}</div></div>`;
+  }
+}
+
+// ---------- Dashboard ----------
+async function renderDashboard(main) {
+  const s = await api('/dashboard/summary');
+  main.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Today's Revenue</div>
+        <div class="stat-value good">${fmtMoney(s.today_revenue)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today's Sales</div>
+        <div class="stat-value">${s.today_sales_count}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">This Month</div>
+        <div class="stat-value">${fmtMoney(s.month_revenue)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Outstanding Debt</div>
+        <div class="stat-value warn">${fmtMoney(s.outstanding_debt)}</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title">Low stock</div>
+      ${s.low_stock_profiles.length
+        ? `<ul>${s.low_stock_profiles.map(p => `<li>${p}</li>`).join('')}</ul>`
+        : `<div class="empty-state">Nothing running low right now.</div>`}
+    </div>
+  `;
+}
+
+// ---------- Record Sale ----------
+async function renderRecordSale(main) {
+  const profiles = await api('/vouchers/profiles');
+  const agents = await api('/agents/');
+  main.innerHTML = `
+    <div class="card">
+      <div class="card-title">Record a sale</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Voucher profile</label>
+          <select id="rsProfile">
+            ${profiles.map(p => `<option value="${p.id}" data-price="${p.price}">${p.name} — ${fmtMoney(p.price)} (${p.available_count} available)</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input id="rsQty" type="number" min="1" value="1">
+        </div>
+        <div class="field">
+          <label>Total (GHS)</label>
+          <input id="rsTotal" type="number" step="0.01" value="">
+        </div>
+        <div class="field">
+          <label>Agent (optional)</label>
+          <select id="rsAgent">
+            <option value="">— none —</option>
+            ${agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px;" class="checkbox-row">
+        <input type="checkbox" id="rsCredit"> <label for="rsCredit">Customer is paying on credit</label>
+      </div>
+      <div id="rsCreditFields" class="form-grid hidden" style="margin-top:12px;">
+        <div class="field"><label>Customer name</label><input id="rsCustName" type="text"></div>
+        <div class="field"><label>Customer phone</label><input id="rsCustPhone" type="text"></div>
+        <div class="field"><label>Paid now (GHS)</label><input id="rsPaidNow" type="number" step="0.01" value="0"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="rsSubmit" style="width:auto; padding:10px 24px;">Record sale</button>
+      </div>
+    </div>
+  `;
+
+  const profileSelect = document.getElementById('rsProfile');
+  const totalInput = document.getElementById('rsTotal');
+  const qtyInput = document.getElementById('rsQty');
+  function recalcTotal() {
+    const opt = profileSelect.options[profileSelect.selectedIndex];
+    if (opt) totalInput.value = (Number(opt.dataset.price) * Number(qtyInput.value || 1)).toFixed(2);
+  }
+  profileSelect.addEventListener('change', recalcTotal);
+  qtyInput.addEventListener('input', recalcTotal);
+  recalcTotal();
+
+  document.getElementById('rsCredit').addEventListener('change', (e) => {
+    document.getElementById('rsCreditFields').classList.toggle('hidden', !e.target.checked);
+  });
+
+  document.getElementById('rsSubmit').addEventListener('click', async () => {
+    const isCredit = document.getElementById('rsCredit').checked;
+    const payload = {
+      profile_id: Number(profileSelect.value),
+      qty: Number(qtyInput.value),
+      total: Number(totalInput.value),
+      agent_id: document.getElementById('rsAgent').value ? Number(document.getElementById('rsAgent').value) : null,
+      is_credit: isCredit,
+    };
+    if (isCredit) {
+      payload.customer_name = document.getElementById('rsCustName').value.trim();
+      payload.customer_phone = document.getElementById('rsCustPhone').value.trim();
+      payload.paid_now = Number(document.getElementById('rsPaidNow').value || 0);
+    }
+    try {
+      await api('/sales/', { method: 'POST', body: JSON.stringify(payload) });
+      showToast('Sale recorded');
+      renderTab('record');
+    } catch (e) {
+      showToast(e.message);
+    }
+  });
+}
+
+// ---------- Vouchers ----------
+async function renderVouchers(main) {
+  const profiles = await api('/vouchers/profiles');
+  main.innerHTML = `
+    <div class="card">
+      <div class="card-title">Add a voucher profile</div>
+      <div class="form-grid">
+        <div class="field"><label>Name</label><input id="vpName" type="text" placeholder="1 Day Unlimited"></div>
+        <div class="field"><label>Price (GHS)</label><input id="vpPrice" type="number" step="0.01"></div>
+        <div class="field"><label>Cost price (GHS)</label><input id="vpCost" type="number" step="0.01" value="0"></div>
+        <div class="field"><label>Duration label</label><input id="vpDuration" type="text" placeholder="1 Day"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" id="vpAdd">Add profile</button></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Voucher profiles</div>
+      <table>
+        <thead><tr><th>Name</th><th>Duration</th><th class="num">Price</th><th class="num">Cost</th><th class="num">Margin</th><th class="num">Available</th><th></th></tr></thead>
+        <tbody>
+          ${profiles.map(p => `
+            <tr>
+              <td>${p.name}</td>
+              <td>${p.duration_label || '—'}</td>
+              <td class="num">${fmtMoney(p.price)}</td>
+              <td class="num">${fmtMoney(p.cost_price)}</td>
+              <td class="num">${fmtMoney(p.price - p.cost_price)}</td>
+              <td class="num">${p.available_count}</td>
+              <td><button class="btn btn-sm" data-batch="${p.id}" style="background:var(--panel-2); color:var(--text); border:1px solid var(--border);">Add codes</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="7" class="empty-state">No voucher profiles yet — add one above.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="card hidden" id="batchCard">
+      <div class="card-title">Add voucher codes</div>
+      <div class="field"><label>Paste codes, one per line</label>
+        <textarea id="batchCodes" rows="6" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:10px; font-family:var(--mono);"></textarea>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" id="batchSubmit">Add to stock</button></div>
+    </div>
+  `;
+
+  document.getElementById('vpAdd').addEventListener('click', async () => {
+    const payload = {
+      name: document.getElementById('vpName').value.trim(),
+      price: Number(document.getElementById('vpPrice').value),
+      cost_price: Number(document.getElementById('vpCost').value || 0),
+      duration_label: document.getElementById('vpDuration').value.trim(),
+      low_stock_threshold: 10,
+    };
+    if (!payload.name || !payload.price) { showToast('Name and price are required'); return; }
+    try {
+      await api('/vouchers/profiles', { method: 'POST', body: JSON.stringify(payload) });
+      showToast('Voucher profile added');
+      renderTab('vouchers');
+    } catch (e) { showToast(e.message); }
+  });
+
+  let batchProfileId = null;
+  document.querySelectorAll('[data-batch]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      batchProfileId = Number(btn.dataset.batch);
+      document.getElementById('batchCard').classList.remove('hidden');
+      document.getElementById('batchCard').scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+  document.getElementById('batchSubmit').addEventListener('click', async () => {
+    const codes = document.getElementById('batchCodes').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!batchProfileId || !codes.length) { showToast('Paste at least one code'); return; }
+    try {
+      const res = await api('/vouchers/batch', { method: 'POST', body: JSON.stringify({ profile_id: batchProfileId, codes }) });
+      showToast(`Added ${res.added} voucher code(s)`);
+      renderTab('vouchers');
+    } catch (e) { showToast(e.message); }
+  });
+}
+
+// ---------- Sales Log ----------
+async function renderSalesLog(main) {
+  const sales = await api('/sales/');
+  main.innerHTML = `
+    <div class="card">
+      <div class="card-title">Sales log</div>
+      <table>
+        <thead><tr><th>Date</th><th>Profile</th><th class="num">Qty</th><th class="num">Total</th><th>Type</th><th></th></tr></thead>
+        <tbody>
+          ${sales.map(s => `
+            <tr>
+              <td>${new Date(s.created_at).toLocaleString()}</td>
+              <td>${s.profile_name}</td>
+              <td class="num">${s.qty}</td>
+              <td class="num">${fmtMoney(s.total)}</td>
+              <td>${s.voided ? '<span class="pill pill-voided">Voided</span>' : (s.is_credit ? '<span class="pill pill-open">Credit</span>' : '<span class="pill pill-settled">Cash</span>')}</td>
+              <td>${!s.voided ? `<button class="btn btn-sm" data-void="${s.id}" style="background:var(--panel-2); color:var(--bad); border:1px solid var(--border);">Void</button>` : ''}</td>
+            </tr>
+          `).join('') || `<tr><td colspan="6" class="empty-state">No sales recorded yet.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.querySelectorAll('[data-void]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const reason = prompt('Reason for voiding this sale?');
+      if (!reason) return;
+      try {
+        await api(`/sales/${btn.dataset.void}/void`, { method: 'POST', body: JSON.stringify({ reason }) });
+        showToast('Sale voided');
+        renderTab('log');
+      } catch (e) { showToast(e.message); }
+    });
+  });
+}
+
+// ---------- Debtors ----------
+async function renderDebtors(main) {
+  const debtors = await api('/debtors/');
+  main.innerHTML = `
+    <div class="card">
+      <div class="card-title">Debtors</div>
+      <table>
+        <thead><tr><th>Customer</th><th>Phone</th><th class="num">Total</th><th class="num">Balance</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${debtors.map(d => `
+            <tr>
+              <td>${d.customer_name}</td>
+              <td>${d.customer_phone || '—'}</td>
+              <td class="num">${fmtMoney(d.total)}</td>
+              <td class="num">${fmtMoney(d.balance)}</td>
+              <td><span class="pill pill-${d.status}">${d.status}</span></td>
+              <td>${d.status === 'open' ? `<button class="btn btn-sm" data-pay="${d.id}" data-max="${d.balance}" style="background:var(--panel-2); color:var(--text); border:1px solid var(--border);">Record payment</button>` : ''}</td>
+            </tr>
+          `).join('') || `<tr><td colspan="6" class="empty-state">No debtors — everyone's paid up.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.querySelectorAll('[data-pay]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const amount = prompt(`Payment amount (balance owed: ${fmtMoney(btn.dataset.max)}):`);
+      if (!amount) return;
+      try {
+        const res = await api(`/debtors/${btn.dataset.pay}/payments`, { method: 'POST', body: JSON.stringify({ amount: Number(amount) }) });
+        showToast(`Payment recorded — new balance ${fmtMoney(res.new_balance)}`);
+        renderTab('debtors');
+      } catch (e) { showToast(e.message); }
+    });
+  });
+}
+
+// ---------- Agents ----------
+async function renderAgents(main) {
+  const agents = await api('/agents/');
+  const rows = await Promise.all(agents.map(a => api(`/agents/${a.id}/commission`)));
+  main.innerHTML = `
+    <div class="card">
+      <div class="card-title">Add an agent</div>
+      <div class="form-grid">
+        <div class="field"><label>Name</label><input id="agName" type="text"></div>
+        <div class="field"><label>Phone</label><input id="agPhone" type="text"></div>
+        <div class="field"><label>Commission rate (%)</label><input id="agRate" type="number" step="0.1"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" id="agAdd">Add agent</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Agent commission</div>
+      <table>
+        <thead><tr><th>Agent</th><th class="num">Revenue</th><th class="num">Rate</th><th class="num">Earned</th><th class="num">Paid</th><th class="num">Balance due</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${r.agent_name}</td>
+              <td class="num">${fmtMoney(r.revenue)}</td>
+              <td class="num">${r.commission_rate}%</td>
+              <td class="num">${fmtMoney(r.earned)}</td>
+              <td class="num">${fmtMoney(r.paid)}</td>
+              <td class="num" style="color:var(--warn); font-weight:700;">${fmtMoney(r.balance_due)}</td>
+            </tr>
+          `).join('') || `<tr><td colspan="6" class="empty-state">No agents yet — add one above.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('agAdd').addEventListener('click', async () => {
+    const payload = {
+      name: document.getElementById('agName').value.trim(),
+      phone: document.getElementById('agPhone').value.trim(),
+      commission_rate: Number(document.getElementById('agRate').value || 0),
+    };
+    if (!payload.name) { showToast('Name is required'); return; }
+    try {
+      await api('/agents/', { method: 'POST', body: JSON.stringify(payload) });
+      showToast('Agent added');
+      renderTab('agents');
+    } catch (e) { showToast(e.message); }
+  });
+}
+
+// ---------- Boot ----------
+if (token) { enterApp(); }
+</script>
+</body>
+</html>
