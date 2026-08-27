@@ -202,7 +202,7 @@
 <script>
 const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8000'
-  : ''; // set this to your deployed API URL in production
+  : 'https://elinksaas-production.up.railway.app';
 
 let token = localStorage.getItem('elink_token') || null;
 let bizName = localStorage.getItem('elink_biz') || '';
